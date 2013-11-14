@@ -106,10 +106,23 @@ function git_author_info() {
   echo "Current author: $(git config user.name)"
 }
 
+function ruby-version-name() {
+  echo $RUBY_AUTO_VERSION
+  #ruby -v | cut -f 2 -d ' '
+}
+
 function dir_jump() {
   cd $@
   set_title `pwd | xargs basename`
   git_author_info
+}
+
+function r3() {
+  BUNDLE_GEMFILE=Gemfile.rails3 $@
+}
+
+function rmb() {
+  (git branch -D $@ || test 1) && git push origin :$@ && git push tddium :$@
 }
 
 export BUNDLER_EDITOR='mvim'
@@ -117,14 +130,14 @@ export EDITOR='mvim'
 
 alias console='open -a Console '
 alias gem_tunnel='ssh -NCf -L 2000:localhost:80 "ubuntu@gems.efficiency20.com"'
-alias zdesk='dir_jump /Users/esinclair/github/zendesk/zendesk'
 alias cuc='cucumber'
-alias bspec='bundle exec rspec'
 alias br='bundle exec rspec'
 alias rs='rake spec'
-alias gpb='git-publish-branch'
 alias gt='git stash'
+alias ghco='git-hub-commit $1'
 alias glc="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit"
-alias gls='git --no-pager log --date=short --all --pretty=format:"%C(yellow)%h %Creset%cd%Cred|%cn|%Creset%s%C(bold yellow)|%d%Creset" | awk -F "|" "{gsub(/[a-z]+/,\"\",\$2);gsub(/ /,\"\",\$2);gsub(/&/,\" & \",\$2);gsub(/uction\/|ing\/|_testing\/|gin\//,\":\",\$4);gsub(/[0-9]{6}\,/,\",\",\$4);gsub(/[0-9]{6}\)/,\")\",\$4);print\$0}" | less -ReS'
+alias gls='git --no-pager log --date=short --pretty=format:"%C(yellow)%h %Creset%cd%Cred|%cn|%Creset%s%C(bold yellow)|%d%Creset" | awk -F "|" "{gsub(/[a-z]+/,\"\",\$2);gsub(/ /,\"\",\$2);gsub(/&/,\" & \",\$2);gsub(/uction\/|ing\/|_testing\/|gin\//,\":\",\$4);gsub(/[0-9]{6}\,/,\",\",\$4);gsub(/[0-9]{6}\)/,\")\",\$4);print\$0}" | less -ReS'
+alias gw='git checkout $1 && git rebase master'
 alias fix='git diff --name-only | uniq | xargs $EDITOR'
 alias tmux="TERM=screen-256color-bce tmux"
+alias gpair='dir_jump /Users/esinclair/github/edsinclair/git-pair'
