@@ -122,7 +122,7 @@ function r3() {
 }
 
 function rmb() {
-  (git branch -D $@ || test 1) && git push origin :$@ && git push tddium :$@
+  (git branch -D $@ || test 1) && git push origin :$@
 }
 
 export BUNDLER_EDITOR='mvim'
