@@ -12,11 +12,43 @@
 # cd $brainstormr
 #
 # brainstormr=/Users/robbyrussell/Projects/development/planetargon/brainstormr
-#
 
 autoload edit-command-line
 zle -N edit-command-line
 bindkey '^Xe' edit-command-line
+
+function ssh-ec2 {
+  ssh ec2-user@$(aws ec2 describe-instances --filters Name=tag:Name,Values=$1 | jq -r '.Reservations[].Instances[]|select(.State.Code == 16)|.PublicDnsName' | head -1)
+}
+
+function pretty-json {
+  ruby -e "require 'json'; puts (JSON.pretty_generate JSON.parse(STDIN.read))"
+}
+
+function get-city() {
+  if [ $1 = 'Maison-Neuve' ]; then
+    echo "zmw:00000.27.07570"
+  else
+    echo $1
+  fi
+}
+
+function current-temp() {
+  api_key=$(cat ~/.wunderground)
+  city=$(get-city $@)
+  curl -s "http://api.wunderground.com/api/${api_key}/geolookup/conditions/q/FR/${city}.json" | jq -r '.current_observation | .feelslike_string'
+}
+
+function hourly-temp() {
+  api_key=$(cat ~/.wunderground)
+  city=$(get-city $@)
+  curl -s "http://api.wunderground.com/api/${api_key}/hourly/q/FR/${city}.json" | jq -r '.hourly_forecast[] | "\(.FCTTIME.hour):\(.FCTTIME.min) - \(.feelslike.metric)C \(.feelslike.english)F"'
+}
+
+
+function now() {
+  echo $(date "+%Y-%m-%d %H:%M:%S") - "$@" >> ./.now
+}
 
 function ssht() {
   set_title $@
@@ -103,7 +135,7 @@ function cur() {
 
 function git_author_info() {
   ref=$(git symbolic-ref HEAD 2> /dev/null) || return
-  echo "Current author: $(git config user.name)"
+  echo "Current author: $(git config user.name) <$(git config user.email)>"
 }
 
 function ruby-version-name() {
@@ -117,22 +149,55 @@ function dir_jump() {
   git_author_info
 }
 
-function r3() {
-  BUNDLE_GEMFILE=Gemfile.rails3 $@
-}
-
 function rmb() {
   (git branch -D $@ || test 1) && git push origin :$@
 }
 
-export BUNDLER_EDITOR='mvim'
-export EDITOR='mvim'
+function hg() {
+  history | grep "$@"
+}
 
-alias console='open -a Console '
+function _get_workspace_status() {
+  aws ec2 describe-instances --filters "Name=tag:Name,Values=eirik-workspace"
+}
+
+function ws_status() {
+  full_status=$(_get_workspace_status)
+  echo $full_status | jq -r '.Reservations[0].Instances[0].State.Name'
+}
+
+function _get_status_code() {
+  full_status=$(_get_workspace_status)
+  echo $full_status | jq -r '.Reservations[0].Instances[0].State.Code'
+}
+
+function ws_login {
+  status_code=$(_get_status_code)
+  if [ $status_code -gt 16 ]
+  then
+    echo "starting workspace"
+    aws ec2 start-instances --instance-ids=$(echo $full_status | jq -r '.Reservations[0].Instances[0].InstanceId')
+  else
+    ssh $(echo $full_status | jq -r '.Reservations[0].Instances[0].PublicDnsName')
+  fi
+}
+
+function ws_stop {
+  status_code=$(_get_status_code)
+  if [ $status_code -eq 16 ]
+  then
+    echo "stopping workspace"
+    aws ec2 stop-instances --instance-ids=$(echo $full_status | jq -r '.Reservations[0].Instances[0].InstanceId')
+  else
+    echo $full_status | jq -r '.Reservations[0].Instances[0].State.Name'
+  fi
+}
+
+export BUNDLER_EDITOR='mvim'
+export EDITOR='mvim -f'
+
+alias dcm='docker-compose'
 alias gem_tunnel='ssh -NCf -L 2000:localhost:80 "ubuntu@gems.efficiency20.com"'
-alias cuc='cucumber'
-alias br='bundle exec rspec'
-alias rs='rake spec'
 alias gt='git stash'
 alias ghco='git-hub-commit $1'
 alias glc="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit"
@@ -141,3 +206,4 @@ alias gw='git checkout $1 && git rebase master'
 alias fix='git diff --name-only | uniq | xargs $EDITOR'
 alias tmux="TERM=screen-256color-bce tmux"
 alias gpair='dir_jump /Users/esinclair/github/edsinclair/git-pair'
+alias tt='timetrap'
